@@ -39,7 +39,6 @@ pub fn main() !void {
     const glContext = c.SDL_GL_CreateContext(Global.window) orelse return err.SDL.init;
     defer _ = c.SDL_GL_DestroyContext(glContext);
 
-    // const version = c.gladLoadGLLoader(c.SDL_GL_GetProcAddress);
     const version = c.gladLoadGL();
     if (version == 0) return err.SDL.init;
 
