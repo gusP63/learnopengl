@@ -95,3 +95,94 @@ gladLoadGL();
 // ... call gl functions
 
 ```
+
+--- 19/02/2026 ---
+
+## The Rendering Pipeline
+
+Everything in OpenGL is in 3D space
+The rendering pipeline can be divided into two great sections:
+- 3d -> 2d
+- 2d -> pixels
+
+Each stage requires a lot of parallel computations, which are run on dedicated gpu cores (processing cores), of which there are thousands
+The programs that run on these cores are called *Shaders*, written in GLSL (OpenGL Shading Language)
+
+We pass in a list of 3D Coordinates which may make up a triangle, a line, some points... Let's call the array Vertex Data
+Vertex Data is an array of Vertices.
+A Vertex is a collection of data per 3D Coordinate
+This data is represented using *Vertex Attributes* and can be anything we like (position, color, ...)
+
+To tell OpenGL how to draw the points in the Vertex data, we need to hint that to OpenGL when calling the drawing commands, using *Primitives*
+
+Some hints (primitives):
+- GL_POINTS
+- GL_TRIANGLES
+- GL_LINE_STRIP
+
+OpenGL Fragments -> Data required to render a single pixel
+
+Stages of the Rendering Pipeline (Output from one stage -> Input of next stage):
+1. Vertex Shader (takes in a single vertex, transforms 3d data -> different 3d data)
+2. Primitive Assembly (takes in the vertices from the vertex shader and assembles the points in the primitive given (triangle, line, ...))
+3. Geometry Shader (takes in the output from the Primitive Assembly and can generate new shapes from the previous shapes (e.g. subdividing triangles))
+4. Rasterization (maps the resulting primitives to pixels on the screen, performs clipping and generates fragments for the next stage)
+5. Fragment Shader (calculates the final color of a pixel, this is where the fancy effects occur (lighthing, shadows, ...))
+6. Alpha Test and Blending
+
+In modern OpenGL, we must define at least the Vertex Shader and the Fragment Shader ourselves.
+Optionally, we may also define the Geometry Shader.
+
+## Hello Triangle
+
+To draw something, we need to give OpenGL some input
+
+1. Vertex Input
+3D Coordinates (x, y, z), range [-1.0, 1.0] (Normalized device coordinates, represent what is visible on the screen)
+
+Note: In Normalized Device Coordinates (NDC) (0,0,0 is at the center of the viewport, as opposed to the top-left)
+
+```c
+float vertices[] = {
+   -0.5, -0.5, 0.0,
+    0.5, -0.5, 0.0,
+    0.0,  0.5, 0.0,
+}
+```
+
+Since we're drawing a 2d triangle, we set the z on every point to 0.0 (all same depth)
+These coordinates will be transformed to screen-space coordinates via the data provided in glViewport earlier.
+The resulting screen-space coordinates will then be transformed to fragments as inputs to our fragment shader.
+
+To send and store data on the GPU, we need to create *Vertex Buffer Objects* (VBO) that can store a large number of vertices
+
+```c
+// create the object and assign a UID
+unsigned int VBO;
+glGenBuffers(1, &VBO);
+
+// bind it to the buffer array
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+// any calls from now on will configure the currently bound buffer (VBO)
+// copy the data into the buffer's memory
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+```
+
+Draw parameter:
+- GL_STREAM_DRAW: the data is set only once and used by the GPU at most a few times.
+- GL_STATIC_DRAW: the data is set only once and used many times.
+- GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
+
+Once we have the vertex and fragment shaders we need to link them to a 
+*shader program* (Combines multiple shaders)
+then activate this program when issuing rendering calls
+
+We use vertex array objects (VAO) for storing attributes and configurations to later draw something using said attributes
+
+```c
+//.. Process for drawing an object ..
+glUseProgram(shader_program);
+glBindVertexArray(vao);
+// DrawCoolShit()
+```
