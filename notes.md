@@ -186,3 +186,58 @@ glUseProgram(shader_program);
 glBindVertexArray(vao);
 // DrawCoolShit()
 ```
+
+
+--- 21/02/2026 ---
+
+What is the difference between vbo and vao?
+
+vbo - vertex buffer object (stores the actual data)
+vao - vertex array object (stores the vbo and associated drawing attributes)
+
+
+Element Buffer Object (EBO)
+- Stores indices that tell OpenGL the order in which to draw the objects
+- Initialized the same way as vbo's
+- Also stored and used in vao's (same as vbo)
+- Useful for drawing rectangles and other shapes from triangles, without repeating unneccessary drawings
+
+In practice:
+
+```zig
+const vertices = [_]f32{ // vertex data (stored in vbo)
+        -0.5, 0.5, 0, // top left
+        0.5, 0.5, 0, // top right
+        0.5, -0.5, 0, // bottom right
+        -0.5, -0.5, 0, // bottom left
+};
+
+const indices = [_]u32{ // order in which to draw triangles (stored in ebo)
+        0, 1, 2, // first triangle
+        0, 2, 3, // second triangle
+};
+
+glBindVertexArray(vao);
+
+glBindBuffer(c.GL_ARRAY_BUFFER, vbo);
+glBufferData(... vertices);
+
+glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, ebo);
+glBufferData(... indices);
+
+glVertexAttribPointer(...); 
+glEnableVertexAttribArray(0);
+
+// ...
+
+// in render function 
+
+glBindVertexArray(rect);
+glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, @ptrFromInt(0));
+
+//
+
+```
+
+
+
