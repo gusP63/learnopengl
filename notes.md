@@ -240,4 +240,90 @@ glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, @ptrFromInt(0));
 ```
 
 
+--- 23/02/2026 ---
+
+## Shaders
+
+### ins and outs
+vertex shader takes in input directly from the vertex data (defined in atrribPointer)
+
+fragment shader can take in input from the vertex shader
+fragment shader must output a vec4 rgba color (that's the whole point)
+
+vertex shader -> fragment shader
+
+input and output variables must be have the same types and names
+
+vertexShader.glsl
+```glsl 
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+
+out vec3 some_out_1;
+out vec4 some_out_2;
+
+void main()
+{
+    gl_position = vec4(aPos, 1.0);
+
+    some_out_1 = vec3(1.0, 1.0, 1.0);
+    some_out_2 = vec4(aPos.x, aPos.y, aPos.z / 2, 0.67);
+}
+```
+
+fragmentShader.glsl
+```glsl
+
+out vec4 FragColor;
+
+in vec3 some_out_1;
+in vec4 some_out_2;
+
+void main()
+{
+    //... do something with input variables
+
+    FragColor = vec4(0.1, 0.1, 0.1, 1.0);
+}
+```
+
+(Note) The following are all valid:
+
+```glsl
+in vec3 aPos;
+
+gl_position = (aPos.x, aPos.y, aPos.z, 1.0);
+gl_position = (aPos.xyz, 1.0);
+gl_position = (aPos, 1.0);
+```
+
+### Uniforms
+
+Uniforms are a way to send variables from our CPU program to the shaders
+Uniforms are global and can be accessed by any shader at any point of the program
+They keep their value until they are reset or updated
+
+```glsl
+#version 330 core
+
+out vec4 FragColor;
+
+uniform vec4 MyColor; // We set this variable in the OpenGL code
+
+void main() 
+{
+    FragColor = MyColor;
+}
+
+```
+
+Updating uniforms from the opengl code:
+```c
+float timeValue = glfwGetTime();
+float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+glUseProgram(shaderProgram);
+glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+```
 

@@ -14,11 +14,13 @@ var vao_rect: u32 = undefined;
 var vbo_rect: u32 = undefined;
 var ebo: u32 = undefined; // element buffer object
 
+var my_vertex_color_location: i32 = undefined;
+
 const State = struct {
     const Shape = enum { draw_triangle, draw_rect };
     const DrawMode = enum { fill, wireframe };
 
-    shape: Shape = .draw_rect,
+    shape: Shape = .draw_triangle,
     draw_mode: DrawMode = .fill,
 };
 
@@ -27,18 +29,27 @@ var state: State = .{};
 const vertex_shader_source =
     \\#version 330 core
     \\layout (location = 0) in vec3 aPos;
+    \\
+    \\out vec4 vColor;
     \\void main()
     \\{
     \\ gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    \\ vColor = vec4(aPos.x, 0.5 - aPos.y, 0.0, 1.0);
     \\}
 ;
 
 const fragment_shader_source =
     \\#version 330 core
     \\out vec4 FragColor;
+    \\
+    \\in vec4 vShaderColor;
+    \\
+    \\uniform vec4 MyColor;
     \\void main()
     \\{
-    \\FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    \\//FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    \\//FragColor = vShaderColor;
+    \\FragColor = MyColor;
     \\}
 ;
 
@@ -84,11 +95,21 @@ fn input() void {
     }
 }
 
+const current_rgb = struct {
+    var r: f32 = 0.0;
+    var g: f32 = 0.0;
+    var b: f32 = 0.0;
+};
+
 fn draw() void {
     c.glClearColor(0, 0.5, 0.5, 1);
     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
+    const timeValue: f32 = @floatFromInt(c.SDL_GetTicks() / 1000);
+    const greenValue: f32 = (c.SDL_sinf(timeValue) / 2.0) + 0.5;
+
     c.glUseProgram(shader_program);
+    c.glUniform4f(my_vertex_color_location, 0.0, greenValue, 0.0, 1.0);
 
     switch (state.shape) {
         .draw_rect => {
@@ -97,7 +118,7 @@ fn draw() void {
         },
         .draw_triangle => {
             c.glBindVertexArray(vao);
-            c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
+            c.glDrawArrays(c.GL_TRIANGLES, 0, 3);
         },
     }
     c.glBindVertexArray(0);
@@ -154,16 +175,14 @@ pub fn main() !void {
     c.glDeleteShader(vertex_shader);
     c.glDeleteShader(fragment_shader);
 
+    my_vertex_color_location = c.glGetUniformLocation(shader_program, "MyColor");
+
     // - init triangle
     // create a vao and bind it to a vbo and attribute pointer
     c.glGenVertexArrays(1, &vao);
     c.glGenBuffers(1, &vbo);
 
     const triangle_vertices = [_]f32{
-        0,    0.25, 0,
-        0,    0.75, 0,
-        0.75, 0.5,  0,
-
         -0.5, -0.5, 0,
         0.5,  -0.5, 0,
         0.0,  0.5,  0,
