@@ -98,18 +98,30 @@ fn input() void {
 const current_rgb = struct {
     var r: f32 = 0.0;
     var g: f32 = 0.0;
-    var b: f32 = 0.0;
+    var b = 0.0;
 };
+
+var greenValue: f32 = 0;
+var prev: u64 = 0;
+var offset: f32 = 0.01;
 
 fn draw() void {
     c.glClearColor(0, 0.5, 0.5, 1);
     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
-    const timeValue: f32 = @floatFromInt(c.SDL_GetTicks() / 1000);
-    const greenValue: f32 = (c.SDL_sinf(timeValue) / 2.0) + 0.5;
-
     c.glUseProgram(shader_program);
-    c.glUniform4f(my_vertex_color_location, 0.0, greenValue, 0.0, 1.0);
+
+    const now = c.SDL_GetTicks();
+    const elapsed = c.SDL_GetTicks() - prev;
+    if (elapsed > 20) {
+        prev = now;
+
+        if (greenValue >= 1) offset = -0.01;
+        if (greenValue <= 0.5) offset = 0.01;
+
+        greenValue += offset;
+        c.glUniform4f(my_vertex_color_location, 0.0, greenValue, 0.0, 1.0);
+    }
 
     switch (state.shape) {
         .draw_rect => {
