@@ -1,11 +1,12 @@
 const print = @import("std").debug.print;
-const c = @import("c.zig").c;
 const Global = @import("Global.zig");
 const err = @import("err.zig");
+const c = @import("c.zig").c;
+const Shader = @import("shader.zig").Shader;
 
 var quit: bool = false;
 
-var shader_program: u32 = undefined;
+//var shader_program: u32 = undefined;
 
 var vao: u32 = undefined; // vertex array object
 var vbo: u32 = undefined; // vertex buffer object
@@ -15,6 +16,7 @@ var vbo_rect: u32 = undefined;
 var ebo: u32 = undefined; // element buffer object
 
 var my_vertex_color_location: i32 = undefined;
+var shader_obj: Shader = undefined;
 
 const State = struct {
     const Shape = enum { draw_triangle, draw_rect };
@@ -29,30 +31,31 @@ var state: State = .{};
 const vertex_shader_source =
     \\#version 330 core
     \\layout (location = 0) in vec3 aPos;
+    \\layout (location = 1) in vec3 aColor;
     \\
     \\out vec4 vColor;
     \\void main()
     \\{
-    \\ gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    \\ vColor = vec4(aPos.x, 0.5 - aPos.y, 0.0, 1.0);
+    \\ gl_Position = vec4(aPos, 1.0);
+    \\ vColor = vec4(aColor, 1.0);
     \\}
 ;
-
+//
 const fragment_shader_source =
     \\#version 330 core
     \\out vec4 FragColor;
     \\
-    \\in vec4 vShaderColor;
+    \\in vec4 vColor;
     \\
     \\uniform vec4 MyColor;
     \\void main()
     \\{
     \\//FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    \\//FragColor = vShaderColor;
-    \\FragColor = MyColor;
+    \\//FragColor = MyColor;
+    \\ FragColor = vColor;
     \\}
 ;
-
+//
 fn input() void {
     var event: c.SDL_Event = undefined;
 
@@ -95,12 +98,6 @@ fn input() void {
     }
 }
 
-const current_rgb = struct {
-    var r: f32 = 0.0;
-    var g: f32 = 0.0;
-    var b = 0.0;
-};
-
 var greenValue: f32 = 0;
 var prev: u64 = 0;
 var offset: f32 = 0.01;
@@ -109,20 +106,19 @@ fn draw() void {
     c.glClearColor(0, 0.5, 0.5, 1);
     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
-    c.glUseProgram(shader_program);
+    // const now = c.SDL_GetTicks();
+    // const elapsed = c.SDL_GetTicks() - prev;
+    // if (elapsed > 20) {
+    //     prev = now;
+    //
+    //     if (greenValue >= 1) offset = -0.01;
+    //     if (greenValue <= 0.5) offset = 0.01;
+    //
+    //     greenValue += offset;
+    //     c.glUniform4f(my_vertex_color_location, 0.0, greenValue, 0.0, 1.0);
+    // }
 
-    const now = c.SDL_GetTicks();
-    const elapsed = c.SDL_GetTicks() - prev;
-    if (elapsed > 20) {
-        prev = now;
-
-        if (greenValue >= 1) offset = -0.01;
-        if (greenValue <= 0.5) offset = 0.01;
-
-        greenValue += offset;
-        c.glUniform4f(my_vertex_color_location, 0.0, greenValue, 0.0, 1.0);
-    }
-
+    shader_obj.use();
     switch (state.shape) {
         .draw_rect => {
             c.glBindVertexArray(vao_rect);
@@ -166,43 +162,33 @@ pub fn main() !void {
     // initialization code
     c.glViewport(0, 0, Global.width, Global.height);
 
-    // creating and linking shaders
-    const vertex_shader: u32 = c.glCreateShader(c.GL_VERTEX_SHADER);
-    c.glShaderSource(vertex_shader, 1, @ptrCast(&vertex_shader_source), null);
-    c.glCompileShader(vertex_shader);
-    try Global.shaderDidCompile(vertex_shader);
+    shader_obj = try Shader.create(
+        "src/shaders/vertex.glsl",
+        "src/shaders/fragment.glsl",
+    );
 
-    const fragment_shader: u32 = c.glCreateShader(c.GL_FRAGMENT_SHADER);
-    c.glShaderSource(fragment_shader, 1, @ptrCast(&fragment_shader_source), null);
-    c.glCompileShader(fragment_shader);
-    try Global.shaderDidCompile(fragment_shader);
-
-    shader_program = c.glCreateProgram();
-    c.glAttachShader(shader_program, vertex_shader);
-    c.glAttachShader(shader_program, fragment_shader);
-    c.glLinkProgram(shader_program);
-    try Global.shadersDidLink(shader_program);
-
-    // dont need the shaders anymore after attaching
-    c.glDeleteShader(vertex_shader);
-    c.glDeleteShader(fragment_shader);
-
-    my_vertex_color_location = c.glGetUniformLocation(shader_program, "MyColor");
+    my_vertex_color_location = c.glGetUniformLocation(shader_obj.id, "MyColor");
 
     // - init triangle
     // create a vao and bind it to a vbo and attribute pointer
     c.glGenVertexArrays(1, &vao);
     c.glGenBuffers(1, &vbo);
 
-    const triangle_vertices = [_]f32{
-        -0.5, -0.5, 0,
-        0.5,  -0.5, 0,
-        0.0,  0.5,  0,
+    // const triangle_vertices = [_]f32{
+    //     -0.5, -0.5, 0,
+    //     0.5,  -0.5, 0,
+    //     0.0,  0.5,  0,
+    // };
+    //
+    const triangle_vertices_with_colors = [_]f32{
+        -0.5, -0.5, 0, 1.0, 0.0, 0.0,
+        0.5,  -0.5, 0, 0.0, 1.0, 0.0,
+        0.0,  0.5,  0, 0.0, 0.0, 1.0,
     };
 
     c.glBindVertexArray(vao);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, vbo);
-    c.glBufferData(c.GL_ARRAY_BUFFER, triangle_vertices.len * @sizeOf(f32), &triangle_vertices, c.GL_STATIC_DRAW);
+    c.glBufferData(c.GL_ARRAY_BUFFER, triangle_vertices_with_colors.len * @sizeOf(f32), &triangle_vertices_with_colors, c.GL_STATIC_DRAW);
 
     // tell openGL how to interpret the data from vertex buffer
     c.glVertexAttribPointer(
@@ -210,10 +196,20 @@ pub fn main() !void {
         3, // size (1,2,3,4) vec3 in this case
         c.GL_FLOAT, // data type
         c.GL_FALSE, // normalize data?
-        3 * @sizeOf(f32), // stride (space between consecutive vertex attributes)
+        6 * @sizeOf(f32), // stride (space between consecutive vertex attributes)
         @ptrFromInt(0), // offset of where the position data begins in the buffer
     );
     c.glEnableVertexAttribArray(0);
+
+    c.glVertexAttribPointer(
+        1,
+        3,
+        c.GL_FLOAT,
+        c.GL_FALSE,
+        6 * @sizeOf(f32),
+        @ptrFromInt(3 * @sizeOf(f32)),
+    );
+    c.glEnableVertexAttribArray(1);
 
     // unbind the vbo
     c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);

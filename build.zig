@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
     const ex5_8 = b.addExecutable(.{
         .name = "ex5_8",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/5_8.zig"),
+            .root_source_file = b.path("src/exercises/5_8.zig"),
             .target = target,
             .optimize = optimize,
         }),
