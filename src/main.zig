@@ -163,8 +163,8 @@ pub fn main() !void {
     c.glViewport(0, 0, Global.width, Global.height);
 
     shader_obj = try Shader.create(
-        "src/shaders/vertex.glsl",
-        "src/shaders/fragment.glsl",
+        @embedFile("shaders/vertex.glsl"),
+        @embedFile("shaders/fragment.glsl"),
     );
 
     my_vertex_color_location = c.glGetUniformLocation(shader_obj.id, "MyColor");

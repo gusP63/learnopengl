@@ -5,36 +5,20 @@ const c = @import("c.zig").c;
 pub const Shader = struct {
     id: u32,
 
+    /// Compile and link vertex and fragment shaders
+    /// @params - The glsl source code for the shaders, in a NULL-terminated string format
+    /// @return - Shader object with associated glShaderProgram id
     pub fn create(
-        vertex_source: []const u8,
-        fragment_source: []const u8,
+        vertex_src: []const u8,
+        fragment_src: []const u8,
     ) !Shader {
-        const flags: std.fs.File.OpenFlags = .{ .mode = .read_only };
-        const v_file: std.fs.File = try std.fs.Dir.openFile(std.fs.cwd(), vertex_source, flags);
-        defer v_file.close();
-        const f_file: std.fs.File = try std.fs.Dir.openFile(std.fs.cwd(), fragment_source, flags);
-        defer f_file.close();
-
-        var v_buffer: [1024]u8 = undefined;
-        var f_buffer: [1024]u8 = undefined;
-        var v_reader = std.fs.File.reader(v_file, &v_buffer);
-        var f_reader = std.fs.File.reader(f_file, &f_buffer);
-
-        const v_size = try v_reader.getSize();
-        const f_size = try f_reader.getSize();
-
-        _ = try v_reader.interface.peek(v_size);
-        v_buffer[v_size] = 0;
-        _ = try f_reader.interface.peek(f_size);
-        f_buffer[f_size] = 0;
-
         const vert_shader: u32 = c.glCreateShader(c.GL_VERTEX_SHADER);
-        c.glShaderSource(vert_shader, 1, @ptrCast(&v_buffer[0..v_size]), null);
+        c.glShaderSource(vert_shader, 1, @ptrCast(&vertex_src), null);
         c.glCompileShader(vert_shader);
         try shaderDidCompile(vert_shader);
 
         const frag_shader: u32 = c.glCreateShader(c.GL_FRAGMENT_SHADER);
-        c.glShaderSource(frag_shader, 1, @ptrCast(&f_buffer[0..f_size]), null);
+        c.glShaderSource(frag_shader, 1, @ptrCast(&fragment_src), null);
         c.glCompileShader(frag_shader);
         try shaderDidCompile(frag_shader);
 
