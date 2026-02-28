@@ -64,4 +64,18 @@ pub const Shader = struct {
             return err.GL.shader_linking;
         }
     }
+
+    pub fn setUniformB(self: *Shader, name: []const u8, value: bool) void {
+        c.glUniform1i(c.glGetUniformLocation(self.id, name.ptr), @intFromBool(value));
+    }
+    pub fn setUniformI(self: *Shader, name: []const u8, value: i32) void {
+        c.glUniform1i(c.glGetUniformLocation(self.id, name.ptr), value);
+    }
+    pub fn setUniformU(self: *Shader, name: []const u8, value: u32) void {
+        c.glUniform1ui(c.glGetUniformLocation(self.id, name.ptr), value);
+    }
+    pub fn setUniformF(self: *Shader, name: []const u8, value: f32) void {
+        c.glUniform1f(c.glGetUniformLocation(self.id, name.ptr), value);
+    }
+
 };
